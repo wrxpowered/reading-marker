@@ -1,0 +1,58 @@
+.marker-menu {
+  background-color: #3a3c3e;
+  border-radius: 1em;
+  color: #ffffff;
+  display: flex;
+  span {
+    &:last-child {
+      border-right: none;
+    }
+  }
+
+  &-item {
+    line-height: 2.5em;
+    padding: 0em 1.1em;
+    color: #ffffff;
+    border-right: 1px solid #ffffff;
+    cursor: pointer;
+    justify-content: center;
+    align-items: center;
+    flex-shrink: 0;
+    position: relative;
+  }
+
+  &-select, &-highlight {
+    position: absolute;
+    width: max-content;
+    text-align: center;
+    z-index: $zindex-menu;
+    transform: translate3d(0, -100%, 0);
+    transition: transform 0.2s ease, opacity 0.2s ease;
+  }
+
+  &-triangle {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: -8px;
+    margin-left: -8px;
+    border-top: 8px solid #3a3c3e;
+    border-right: 8px solid transparent;
+    border-left: 8px solid transparent;
+  }
+  &-triangle-above {
+    top: -8px;
+    bottom: auto;
+    border-top: none;
+    border-bottom: 8px solid #3a3c3e;
+  }
+}
+
+
+.marker-menu-select .marker-menu-item-highlight{
+  display: none;
+} 
+.marker-menu-highlight .marker-menu-item-select{
+  display: none;
+}
+

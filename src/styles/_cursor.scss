@@ -1,0 +1,6 @@
+.marker-cursor {
+  user-select: none;
+  display: none;
+  position: absolute;
+  z-index: $zindex-cursor;
+}
