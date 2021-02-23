@@ -609,14 +609,6 @@ export default class Highlight extends BaseElement {
           MenuType.SELECT
         );
       }
-
-      this.marker.noteList.openNoteList(
-        noteData.meta.notes.map(i => ({
-          id: i.id,
-          note: i.meta.note,
-          abstract: i.abstract,
-        }))
-      );
     }
 
     // 处理划线
@@ -701,6 +693,44 @@ export default class Highlight extends BaseElement {
   clear = () => {
     this.lineMap.clear();
     this.removeAllRectangle();
+  }
+
+
+  removeNote = (id) => {
+    let result = null;
+    this.lineMap.forEach((line, rootId) => {
+      if (line.meta.type !== HighlightType.HIGHLIGHT) {
+        return;
+      }
+      let notes = line.meta.notes;
+      let noteIndex = null;
+      const targetNote = notes.filter((item, index) => {
+        if (id === item.id) {
+          noteIndex = index;
+          return true;
+        }
+        return false;
+      })[0];
+
+      if (targetNote) {
+        notes.splice(noteIndex, 1);
+        result = {
+          rootId,
+          newNotes: notes,
+        }
+      }
+    });
+
+    if (result) {
+      this.lineMap.delete(result.rootId);
+      result.newNotes.reverse().forEach(i => {
+        this.highlightNote(i.selection, i.id, i.meta);
+      });
+      this.render();
+      this.marker.reset();
+      return true;
+    }
+    return false;
   }
 }
 

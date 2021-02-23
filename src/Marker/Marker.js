@@ -2,9 +2,6 @@ import Cursor, { CursorType } from './Cursor';
 import Mask from './Mask';
 import Menu from './Menu';
 import Highlight from './Highlight';
-import NoteList from './NoteList';
-import NoteInput from './NoteInput';
-import Toast from './Toast';
 import TouchEvent, { EventType } from './TouchEvent';
 import { 
   DeviceType, 
@@ -60,9 +57,6 @@ const defaultOptions = {
       type: 'copy'
     },
   ],
-  noteListContainer: document.body,
-  noteInputContainer: document.body,
-  toastContainer: document.body,
 }
 
 const preventDefaultCallback = e => e.preventDefault()
@@ -92,12 +86,6 @@ export default class Marker {
     this.markingSelectHandler = () => { }
     this.menu = null;
     this.menuClickHandler = () => { }
-    this.noteInput = null;
-    this.noteSubmitHandler = () => { }
-    this.noteInputCloseHandler = () => { }
-    this.noteList = null;
-    this.noteRemoveHandler = () => { }
-    this.toast = null;
 
     this.create(containerElement);
   }
@@ -391,9 +379,6 @@ export default class Marker {
       menuItems: this.options.menuItems
     }, this);
     this.highlight = new Highlight(this.container, this);
-    this.noteList = new NoteList(this.options.noteListContainer, this);
-    this.noteInput = new NoteInput(this.options.noteInputContainer, this);
-    this.toast = new Toast(this.options.toastContainer);
   }
 
   handleTouchStart = (e) => {
@@ -1310,9 +1295,6 @@ export default class Marker {
     this.mask.destroy();
     this.highlight.destroy();
     this.menu.destroy();
-    this.noteInput.destroy();
-    this.noteList.destroy();
-    this.toast.remove();
 
     this.container = null;
     this.paraAndLinesMap = {};
@@ -1333,12 +1315,6 @@ export default class Marker {
     this.markingSelectHandler = () => { }
     this.menu = null;
     this.menuClickHandler = () => { }
-    this.noteInput = null;
-    this.noteSubmitHandler = () => { }
-    this.noteInputCloseHandler = () => { }
-    this.noteList = null;
-    this.noteRemoveHandler = () => { }
-    this.toast = null;
   }
 
   reset = () => {
@@ -1348,8 +1324,6 @@ export default class Marker {
     this.mask.reset();
     this.menu.hide();
     this.textNode = { start: null, end: null }
-    this.noteList.hide();
-    this.noteInput.reset();
   }
 
 
@@ -1361,7 +1335,6 @@ export default class Marker {
   // 文本复制
   copyText = (text) => {
     copyText(text);
-    this.toast.show('已复制到剪贴板');
   }
 
   onTouchEnd = (callback) => {
@@ -1433,7 +1406,6 @@ export default class Marker {
       y: endRect.top
     }
 
-    this.noteList.hide();
     this.cursor.start.show();
     this.cursor.end.show();
     this.mask.renderRectsLine(rects);
@@ -1652,22 +1624,9 @@ export default class Marker {
  * ============ 笔记API ============
  * ================================
  */
-  onNoteSubmit = (callback) => {
-    if (typeof callback !== 'function') { return; }
-    this.noteSubmitHandler = callback;
-  }
   onNoteRemove = (callback) => {
     if (typeof callback !== 'function') { return; }
     this.noteRemoveHandler = callback;
-  }
-  onNoteInputClose = (callback) => {
-    if (typeof callback !== 'function') { return; }
-    this.noteInputCloseHandler = callback;
-  }
-
-  // 打开笔记输入框
-  openNoteInput = () => {
-    this.noteInput.open();
   }
 
   // 获取笔记
@@ -1722,10 +1681,6 @@ export default class Marker {
       meta.originalEnd = range.end.source;
     }
 
-    if (this.noteInput.isOpen) {
-      this.noteInput.close();
-    }
-
     return this.highlight.highlightLine(
       selection,
       data.id,
@@ -1744,7 +1699,7 @@ export default class Marker {
 
   // 删除笔记
   removeNote = (id) => {
-    return this.noteList.removeNote(id);
+    return this.highlight.removeNote(id);
   }
 
   // 批量删除笔记

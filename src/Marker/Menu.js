@@ -251,7 +251,6 @@ export default class Menu extends BaseElement {
           source,
           this.selectedMarking
         );
-        this.marker.noteInput.selectedRange = data;
         this.marker.menuClickHandler(item.id, data);
         return null;
       }
