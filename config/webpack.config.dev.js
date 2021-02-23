@@ -16,7 +16,7 @@ module.exports = merge(webpackConfig, {
     devServer: {
         host: '0.0.0.0',
         index: 'index.html',
-        port: 5000
+        port: 5001
     },
 
     plugins: [
