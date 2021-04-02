@@ -76,15 +76,18 @@ export function checkParaElement(element) {
   return false;
 }
 
+function isParaElement(ele) {
+  return (
+    (ele.className.indexOf('paragraph') > -1
+      || ele.className.indexOf('headline') > -1)
+    && ele.getAttribute('data-id')
+  );
+}
 
 export function getNextParaElement(ele) {
   const next = ele.nextElementSibling;
   if (next) {
-    if (
-      (next.className.indexOf('paragraph') > -1
-      || next.className.indexOf('headline') > -1)
-      && next.getAttribute('data-id')
-    ) {
+    if (isParaElement(next)) {
       return next;
     } else {
       return getNextParaElement(next);
@@ -96,11 +99,7 @@ export function getNextParaElement(ele) {
 export function getPrevParaElement(ele) {
   const prev = ele.previousElementSibling;
   if (prev) {
-    if (
-      (prev.className.indexOf('paragraph') > -1
-        || prev.className.indexOf('headline') > -1)
-      && prev.getAttribute('data-id')
-    ) {
+    if (isParaElement(prev)) {
       return prev;
     } else {
       return getPrevParaElement(prev);
