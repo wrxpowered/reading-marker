@@ -1579,23 +1579,27 @@ export default class Marker {
       log(`method 'addUnderlines' parameter should be an array.`);
       return null;
     }
-    const result = dataGroup.map(data => this.addUnderline(data));
 
-    let dataIds = [];
+    const results = dataGroup.map(data => this.addUnderline(data));
     let add = [];
     let merge = [];
+    let temp = [];
     let remove = [];
-    result.forEach(i => {
+    results.forEach(i => {
       if (!i) { return; }
-      dataIds.push(i.sourceId);
       add.push(...i.add);
       merge.push(...i.merge);
       remove.push(...i.remove);
     });
-    dataIds = dataIds.filter(i => i);
     add = add.filter(i => remove.indexOf(i.id) === -1);
-    merge = merge.filter(i => remove.indexOf(i.id) === -1);
-    remove = remove.filter(i => dataIds.indexOf(i) > -1);
+    merge = merge.filter(i => {
+      if (remove.indexOf(i.id) === -1) {
+        return true;
+      } else {
+        temp.push(i.id);
+      }
+    });
+    remove = remove.filter(i => temp.indexOf(i) === -1);
 
     return {
       add,

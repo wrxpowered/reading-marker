@@ -232,7 +232,6 @@ export default class Highlight extends BaseElement {
     });
 
     let result = {
-      sourceId: id,
       add: [],
       merge: [],
       remove: data.todo,
