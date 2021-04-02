@@ -278,7 +278,7 @@ export default class Highlight extends BaseElement {
       selection.start.offset,
       selection.end.offset
     ));
-    if (rects.length === 0) { return; }
+    if (rects.length === 0) { return null; }
 
     let highlightId = getRandomString();
     let noteGroupMeta = {
