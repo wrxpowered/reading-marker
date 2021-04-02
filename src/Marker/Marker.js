@@ -1541,6 +1541,7 @@ export default class Marker {
 
   // 添加划线
   addUnderline = (data) => {
+    if (!data || data.type !== MarkingType.UNDERLINE) { return null; }
     const range = checkMarkingData(this.container, data);
     if (!range) { return null; }
 
@@ -1654,6 +1655,7 @@ export default class Marker {
 
   // 添加笔记
   addNote = (data) => {
+    if (!data || data.type !== MarkingType.NOTE) { return null; }
     const range = checkMarkingData(this.container, data);
     if (!range) { return null; }
 

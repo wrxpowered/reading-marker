@@ -466,13 +466,8 @@ export function checkMarkingData(container, data) {
   const endParaNum = parseInt(data.endParaId, 10);
   const endOffset = parseInt(data.endOffset, 10);
   if (
-    data
-    && isString(data.id)
+    isString(data.id)
     && data.id.trim()
-    && (
-      data.type === MarkingType.UNDERLINE
-      || data.type === MarkingType.NOTE
-    )
     && data.startParaId
     && startOffset >= 0
     && data.endParaId
