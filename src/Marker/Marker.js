@@ -2,6 +2,9 @@ import Cursor, { CursorType } from './Cursor';
 import Mask from './Mask';
 import Menu from './Menu';
 import Highlight from './Highlight';
+import NoteList from './NoteList';
+import NoteInput from './NoteInput';
+import Toast from './Toast';
 import TouchEvent, { EventType } from './TouchEvent';
 import { 
   DeviceType, 
@@ -30,6 +33,8 @@ import {
   checkMarkingData,
   copyText,
   isIE9,
+  getTouch,
+  anyToPx,
 } from './utilities';
 import './polyfill';
 
@@ -56,7 +61,18 @@ const defaultOptions = {
       text: '复制',
       type: 'copy'
     },
+    // {
+    //   id: 'SHARE',
+    //   text: '分享',
+    //   type: 'share',
+    // }
   ],
+  noteListContainer: document.body,
+  noteInputContainer: document.body,
+  toastContainer: document.body,
+  scrollOffsetTop: 100,
+  scrollOffsetBottom: 100,
+  scrollSpeedLevel: 4,
 }
 
 const preventDefaultCallback = e => e.preventDefault()
@@ -67,11 +83,16 @@ export default class Marker {
   constructor(containerElement, options) {
     this.options = Object.assign({}, defaultOptions, options);
     this.deviceType = getDeviceType();
+    this.windowHeight = null;
     this.container = null;
+    this.scrollContainer = null;
     this.paraAndLinesMap = {};
 
     this.touchEvent = null;
     this.touchStartTime = 0;
+    this.scrollHandler = () => { }
+    this.selectEndHandler = () => { }
+    this.selectStartHandler = () => { }
     this.touchEndHandler = () => { }
     this.tapHandler = () => { }
     this.longTapHandler = () => { }
@@ -86,8 +107,21 @@ export default class Marker {
     this.markingSelectHandler = () => { }
     this.menu = null;
     this.menuClickHandler = () => { }
+    this.noteInput = null;
+    this.noteSubmitHandler = () => { }
+    this.noteInputCloseHandler = () => { }
+    this.noteList = null;
+    this.noteListOpenHandler = () => { }
+    this.noteRemoveHandler = () => { }
+    this.toast = null;
+    this.scrollInterval = null;
+    this.scrollOffsetTop = null;
+    this.scrollOffsetBottom = null;
+    this.scrollSpeedLevel = null;
 
     this.create(containerElement);
+
+    window.marker = this;
   }
 
   get screenRelativeOffset() {
@@ -115,10 +149,7 @@ export default class Marker {
       this.selectStatusChangeHandler(val);
     }
     this.$selectStatus = val;
-    if (val === SelectStatus.FINISH) {
-      this.menu.type = MenuType.SELECT;
-      this.menu.show();
-    } else {
+    if (val !== SelectStatus.FINISH) {
       this.menu.hide();
     }
   }
@@ -160,7 +191,8 @@ export default class Marker {
   getSelectNodeRectAndText = (startNode, endNode, startOffset, endOffset) => {
     let result = {
       rects: [],
-      text: ''
+      text: '',
+      textArr: [],
     }
     const startPara = this.handlePara(startNode);
     const endPara = this.handlePara(endNode);
@@ -213,7 +245,7 @@ export default class Marker {
       const trimedLine = line.filter(i => i.width !== 0);
       const firstWord = trimedLine[0];
       const endWord = trimedLine[trimedLine.length - 1];
-      let test = {
+      let item = {
         top: firstWord.top,
         left: firstWord.left,
         right: endWord.right,
@@ -223,30 +255,32 @@ export default class Marker {
         text: ''
       };
       line.forEach(i => {
-        test.width += i.width;
+        item.width += i.width;
         if (isLineBreak) {
-          test.lineBreak = true;
+          item.lineBreak = true;
         } else {
-          test.text += i.text;
+          item.text += i.text;
         }
       });
       if (firstWord.top >= topBoundary && firstWord.top <= bottomBoundary) {
-        result.rects.push(test);
+        result.rects.push(item);
       }
-      result.text += test.text;
+      result.text += item.text;
+      return item.text;
     }
 
     const sliceLine = (line, fromWord, toWord, isLineBreak) => {
       const fromIndex = isNumber(fromWord) ? fromWord : 0;
       const toIndex = isNumber(toWord) ? toWord : line.length - 1;
       const wordsOfLine = line.slice(fromIndex, toIndex + 1);
-      concatLine(wordsOfLine, isLineBreak);
+      return concatLine(wordsOfLine, isLineBreak);
     }
 
     const slicePara = (para, fromOffset, toOffset) => {
       if (!para) { return; }
       const startLineIndex = findLine(para, fromOffset, true);
       const endLineIndex = findLine(para, toOffset);
+      if (endLineIndex === -1) { return ''; }
       const lastLine = para.lines[para.lines.length - 1];
       const startWordIndex = isNumber(fromOffset) ? findWord(
         para,
@@ -260,22 +294,24 @@ export default class Marker {
       ) : lastLine.length - 1;
 
       if (startLineIndex === endLineIndex) {
-        sliceLine(para.lines[startLineIndex], startWordIndex, endWordIndex);
+        return sliceLine(para.lines[startLineIndex], startWordIndex, endWordIndex);
       } else {
-        sliceLine(para.lines[startLineIndex], startWordIndex);
+        let text = '';
+        text += sliceLine(para.lines[startLineIndex], startWordIndex);
         para.lines.slice(startLineIndex + 1, endLineIndex).forEach((line, index) => {
           if (para.index.lineBreak[startLineIndex + 1 + index]) {
-            concatLine(line, true);
+            text += concatLine(line, true);
           } else {
-            concatLine(line);
+            text += concatLine(line);
           }
         });
-        sliceLine(
+        text += sliceLine(
           para.lines[endLineIndex], 
           0, 
           endWordIndex,
           para.index.lineBreak[endLineIndex]
         );
+        return text;
       }
     }
 
@@ -283,7 +319,7 @@ export default class Marker {
     if (startNode === endNode) {
       // 一段内的范围
       if (startOffset > endOffset) { return result; }
-      slicePara(startPara, startOffset, endOffset);
+      result.textArr.push(slicePara(startPara, startOffset, endOffset));
       return result;
     }
 
@@ -291,14 +327,15 @@ export default class Marker {
     if (nextNode) {
       if (nextNode === endNode) {
         // 两段内的范围
-        slicePara(startPara, startOffset);
-        slicePara(endPara, 0, endOffset);
+        result.textArr.push(slicePara(startPara, startOffset));
+        result.textArr.push(slicePara(endPara, 0, endOffset));
       } else {
         // 三段及以上的范围
-        slicePara(startPara, startOffset);
-        const { rects, text } = this.getSelectNodeRectAndText(nextNode, endNode, 0, endOffset);
+        result.textArr.push(slicePara(startPara, startOffset));
+        const { rects, text, textArr } = this.getSelectNodeRectAndText(nextNode, endNode, 0, endOffset);
         result.rects.push(...rects);
         result.text += text;
+        result.textArr.push(...textArr);
       }
     }
 
@@ -308,21 +345,23 @@ export default class Marker {
 
   getSelectText = () => {
     try {
-      const { text } = this.getSelectNodeRectAndText(
+      return this.getSelectNodeRectAndText(
         this.textNode.start.node,
         this.textNode.end.node,
         this.textNode.start.offset,
         this.textNode.end.offset
       );
-      return text;
     } catch (error) {
       console.error(error);
-      return '';
+      return {
+        text: '',
+        textArr: []
+      };
     }
   }
 
 
-  create = (containerElement) => {
+  create = (containerElement, scrollContainerElement) => {
     if (!isElement(containerElement)) {
       error('container element must be specified.');
       return;
@@ -332,6 +371,16 @@ export default class Marker {
       e.returnValue = false; 
     }
     this.container.addEventListener('contextmenu', preventDefaultCallback);
+    this.windowHeight = document.documentElement.clientHeight;
+    this.scrollContainer = scrollContainerElement || document.body;
+    if (this.scrollContainer === document.body) {
+      this.scrollContainer.onscroll = this.handleScroll.bind(this)
+    } else {
+      this.containerScroll = () => {
+        this.handleScroll()
+      }
+      this.scrollContainer.addEventListener('scroll', this.containerScroll)
+    }
 
     if (isIE9()) {
       document.body.onselectstart = document.body.ondrag = function () {
@@ -379,6 +428,12 @@ export default class Marker {
       menuItems: this.options.menuItems
     }, this);
     this.highlight = new Highlight(this.container, this);
+    this.noteList = new NoteList(this.options.noteListContainer, this);
+    this.noteInput = new NoteInput(this.options.noteInputContainer, this);
+    this.toast = new Toast(this.options.toastContainer);
+    this.scrollOffsetTop = anyToPx(this.options.scrollOffsetTop);
+    this.scrollOffsetBottom = anyToPx(this.options.scrollOffsetBottom);
+    this.scrollSpeedLevel = this.options.scrollSpeedLevel;
   }
 
   handleTouchStart = (e) => {
@@ -394,12 +449,15 @@ export default class Marker {
       if (startCursorRegion.inRegion && endCursorRegion.inRegion) {
         this.selectStatus = SelectStatus.SELECTING;
         this.movingCursor = startCursorRegion.distance < endCursorRegion.distance ? this.cursor.start : this.cursor.end;
+        this.selectStartHandler();
       } else if (endCursorRegion.inRegion) {
         this.selectStatus = SelectStatus.SELECTING;
         this.movingCursor = this.cursor.end;
+        this.selectStartHandler();
       } else if (startCursorRegion.inRegion) {
         this.selectStatus = SelectStatus.SELECTING;
         this.movingCursor = this.cursor.start;
+        this.selectStartHandler();
       }
     }
 
@@ -507,12 +565,44 @@ export default class Marker {
       if (this.isContains(target)) {
         this.moveCursor(target, x, y);
       }
+      const touch = getTouch(e);
+      const targetY = e.clientY || touch.clientY;
+      if (targetY >= this.windowHeight - this.scrollOffsetBottom) {
+        if (this.scrollInterval !== null) { clearInterval(this.scrollInterval); }
+        const rate = ((targetY - this.windowHeight + this.scrollOffsetBottom) * this.scrollSpeedLevel) / this.scrollOffsetBottom;
+        if (this.isContains(target)) {
+          this.scrollInterval = setInterval(() => {
+            this.scrollHandler(rate);
+          }, 10);
+        }
+      } else if (targetY <= this.scrollOffsetTop) {
+        if (this.scrollInterval !== null) { clearInterval(this.scrollInterval); }
+        const rate = ((this.scrollOffsetTop - targetY) * this.scrollSpeedLevel) / this.scrollOffsetTop;
+        if (this.isContains(target)) {
+          this.scrollInterval = setInterval(() => {
+            this.scrollHandler(-rate);
+          }, 10);
+        }
+      } else {
+        if (this.scrollInterval) {
+          clearInterval(this.scrollInterval)
+          this.scrollInterval = null
+        }
+      }
     }
   }
 
   handleTouchEnd = (e) => {
     if (this.selectStatus === SelectStatus.SELECTING) {
+      if (this.scrollInterval) {
+        clearInterval(this.scrollInterval)
+        this.scrollInterval = null
+      }
+    }
+    if (this.selectStatus === SelectStatus.SELECTING) {
       this.selectStatus = SelectStatus.FINISH;
+      this.menu.show();
+      this.selectEndHandler();
     }
     if (this.deviceType === DeviceType.PC) {
       if (this.selectStatus === SelectStatus.NONE) {
@@ -520,6 +610,12 @@ export default class Marker {
       }
     }
     this.touchEndHandler(e);
+  }
+
+  handleScroll() {
+    // if (this.selectStatus === SelectStatus.FINISH) {
+    //   this.menu.handleScroll()
+    // }
   }
 
   handleLongTap = (e) => {
@@ -598,7 +694,7 @@ export default class Marker {
     if (!para) { return null; }
 
     const lineIndex = searchLineFromPara(para.index, y, this.maxBottom);
-    if (lineIndex !== null) {
+    if (lineIndex !== null && lineIndex > -1) {
       /**
        * 行内处理
        */
@@ -1288,6 +1384,11 @@ export default class Marker {
     if (isIE9()) {
       document.body.onselectstart = document.body.ondrag = null;
     }
+    if (this.containerScroll !== null) {
+      this.scrollContainer.removeEventListener('scroll', this.containerScroll)
+      this.containerScroll = null
+    }
+    this.scrollContainer.onscroll = null
 
     this.touchEvent.destroy();
     this.cursor.start.destroy();
@@ -1295,12 +1396,18 @@ export default class Marker {
     this.mask.destroy();
     this.highlight.destroy();
     this.menu.destroy();
+    this.noteInput.destroy();
+    this.noteList.destroy();
+    this.toast.remove();
 
     this.container = null;
     this.paraAndLinesMap = {};
 
     this.touchEvent = null;
     this.touchStartTime = 0;
+    this.scrollHandler = () => { }
+    this.selectStartHandler = () => { }
+    this.selectEndHandler = () => { }
     this.touchEndHandler = () => { }
     this.tapHandler = () => { }
     this.longTapHandler = () => { }
@@ -1315,6 +1422,19 @@ export default class Marker {
     this.markingSelectHandler = () => { }
     this.menu = null;
     this.menuClickHandler = () => { }
+    this.noteInput = null;
+    this.noteSubmitHandler = () => { }
+    this.noteInputCloseHandler = () => { }
+    this.noteList = null;
+    this.noteListOpenHandler = () => { }
+    this.noteRemoveHandler = () => { }
+    this.toast = null;
+    this.windowHeight = null;
+    this.scrollContainer = null
+    this.scrollInterval = null;
+    this.scrollOffsetTop = null;
+    this.scrollOffsetBottom = null;
+    this.scrollSpeedLevel = null;
   }
 
   reset = () => {
@@ -1324,6 +1444,8 @@ export default class Marker {
     this.mask.reset();
     this.menu.hide();
     this.textNode = { start: null, end: null }
+    this.noteList.hide();
+    this.noteInput.reset();
   }
 
 
@@ -1335,6 +1457,22 @@ export default class Marker {
   // 文本复制
   copyText = (text) => {
     copyText(text);
+    this.toast.show('已复制到剪贴板');
+  }
+
+  onScroll = (callback) => {
+    if (typeof callback !== 'function') { return; }
+    this.scrollHandler = callback;
+  }
+
+  onSelectStart = (callback) => {
+    if (typeof callback !== 'function') { return; }
+    this.selectStartHandler = callback;
+  }
+
+  onSelectEnd = (callback) => {
+    if (typeof callback !== 'function') { return; }
+    this.selectEndHandler = callback;
   }
 
   onTouchEnd = (callback) => {
@@ -1406,11 +1544,13 @@ export default class Marker {
       y: endRect.top
     }
 
+    this.noteList.hide();
     this.cursor.start.show();
     this.cursor.end.show();
     this.mask.renderRectsLine(rects);
     this.menu.reset();
     this.selectStatus = SelectStatus.FINISH;
+    this.menu.show();
     return true;
   }
 
@@ -1579,8 +1719,8 @@ export default class Marker {
       log(`method 'addUnderlines' parameter should be an array.`);
       return null;
     }
-
     const results = dataGroup.map(data => this.addUnderline(data));
+
     let add = [];
     let merge = [];
     let temp = [];
@@ -1629,9 +1769,26 @@ export default class Marker {
  * ============ 笔记API ============
  * ================================
  */
+  onNoteSubmit = (callback) => {
+    if (typeof callback !== 'function') { return; }
+    this.noteSubmitHandler = callback;
+  }
   onNoteRemove = (callback) => {
     if (typeof callback !== 'function') { return; }
     this.noteRemoveHandler = callback;
+  }
+  onNoteListOpen = (callback) => {
+    if (typeof callback !== 'function') { return; }
+    this.noteListOpenHandler = callback;
+  }
+  onNoteInputClose = (callback) => {
+    if (typeof callback !== 'function') { return; }
+    this.noteInputCloseHandler = callback;
+  }
+
+  // 打开笔记输入框
+  openNoteInput = () => {
+    this.noteInput.open();
   }
 
   // 获取笔记
@@ -1687,6 +1844,10 @@ export default class Marker {
       meta.originalEnd = range.end.source;
     }
 
+    if (this.noteInput.isOpen) {
+      this.noteInput.close();
+    }
+
     return this.highlight.highlightLine(
       selection,
       data.id,
@@ -1705,7 +1866,7 @@ export default class Marker {
 
   // 删除笔记
   removeNote = (id) => {
-    return this.highlight.removeNote(id);
+    return this.noteList.removeNote(id);
   }
 
   // 批量删除笔记

@@ -1,0 +1,47 @@
+.marker-note-list {
+  position: fixed;
+  z-index: $zindex-note-list;
+  width: 80%;
+  max-width: 500px;
+  max-height: 250px;
+  overflow-y: auto;
+  border-radius: 12px;
+  box-sizing: border-box;
+  transform: translateX(-50%);
+  left: 50%;
+  bottom: 20px;
+  padding: 18px 28px;
+  background-color: #595959;
+  color: #fff;
+
+  &-item {
+    border-bottom: 1px solid #fff;
+    margin-bottom: 25px;
+    padding: 0px 0px 25px;
+    p {
+      margin: 0.6em 0;
+      min-height: 1em;
+      word-break: break-all;
+    }
+  }
+
+  &-abstract {
+    font-size: 14px;
+    color: #8a8c90;
+    line-height: 24px;
+    padding-left: 10px;
+    border-left: 2px solid rgba(138, 140, 144, 0.5);
+    margin-bottom: 10px;
+    text-align: justify;
+  }
+
+  &-delete {
+    cursor: pointer;
+    display: block;
+    background-color: transparent;
+    font-size: 12px;
+    color: #0097ff;
+    border: none;
+    outline: 0;
+  }
+}

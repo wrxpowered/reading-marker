@@ -57,13 +57,15 @@ export default class Highlight extends BaseElement {
     let highlightId = id;
     let rects;
     let text;
-    ({ rects, text } = this.marker.getSelectNodeRectAndText(
+    let textArr;
+    ({ rects, textArr } = this.marker.getSelectNodeRectAndText(
       selection.start.node,
       selection.end.node,
       selection.start.offset,
       selection.end.offset
     ));
     if (rects.length === 0) { return; }
+    text = textArr.join('\n');
 
     const startRect = rects[0];
     const endRect = rects[rects.length - 1];
@@ -84,7 +86,7 @@ export default class Highlight extends BaseElement {
       }
     };
 
-
+    // 根据合并状态调整 meta
     const check = (line) => {
       if (line.meta.originalStart) {
         const abstract = diff(text, line.meta.originalStart.abstract).map(i => i[1]).join('');
@@ -136,7 +138,7 @@ export default class Highlight extends BaseElement {
           ))
         )
       ) {
-        // 开头交集
+        // 开头交集（待划线开头与当前划线相交）
         data.merge = true;
         data.todo.push(id);
         check(line);
@@ -155,7 +157,7 @@ export default class Highlight extends BaseElement {
           ))
         )
       ) {
-        // 结尾交集
+        // 结尾交集（待划线结尾与当前划线相交）
         data.merge = true;
         data.todo.push(id);
         check(line);
@@ -171,7 +173,7 @@ export default class Highlight extends BaseElement {
           || (end.top < endRect.top && end.top >= start.top)
         )
       ) {
-        // 子集（是当前划线的子集）
+        // 子集（待划线包含当前划线）
         data.merge = true;
         data.todo.push(id);
         check(line);
@@ -184,7 +186,7 @@ export default class Highlight extends BaseElement {
           || (end.top > endRect.top && start.top <= startRect.top)
         )
       ) {
-        // 子集（当前划线为子集）
+        // 子集（当前划线包含待划线）
         data.merge = true;
         data.todo.push(id);
         check(line);
@@ -197,13 +199,18 @@ export default class Highlight extends BaseElement {
       }
     });
 
+    let startParaId = data.start.id;
+    let startOffset = data.start.offset;
+    let endParaId = data.end.id;
+    let endOffset = data.end.offset;
     if (data.merge) {
-      ({ rects, text } = this.marker.getSelectNodeRectAndText(
+      ({ rects, textArr } = this.marker.getSelectNodeRectAndText(
         data.start.node,
         data.end.node,
         data.start.offset,
         data.end.offset
       ));
+      text = textArr.join('\n');
 
       data.todo.forEach(i => {
         this.lineMap.delete(i)
@@ -211,7 +218,17 @@ export default class Highlight extends BaseElement {
       data.todo.push(highlightId);
       highlightId = getRandomString();
     }
-
+    
+    if (meta.originalStart) {
+      startParaId = meta.originalStart.id;
+      startOffset = meta.originalStart.offset;
+      text = meta.originalStart.abstract;
+    }
+    if (meta.originalEnd) {
+      endParaId = meta.originalEnd.id;
+      endOffset = meta.originalEnd.offset;
+      text = meta.originalEnd.abstract;
+    }
 
     let points;
     const offset = {x: 0, y: 0}
@@ -240,10 +257,10 @@ export default class Highlight extends BaseElement {
     const underline = {
       id: highlightId,
       type: MarkingType.UNDERLINE,
-      startParaId: data.start.id,
-      startOffset: data.start.offset,
-      endParaId: data.end.id,
-      endOffset: data.end.offset,
+      startParaId: startParaId,
+      startOffset: startOffset,
+      endParaId: endParaId,
+      endOffset: endOffset,
       abstract: text
     }
     if (data.merge) {
@@ -266,18 +283,20 @@ export default class Highlight extends BaseElement {
    * @param {string} id
    * @param {object} meta
    */
-  highlightNote = (selection, id, meta) => {
+  highlightNote = (selection, id, meta = {}) => {
     let notes = [];
     let note = {};
     let rects;
     let text;
-    ({ rects, text } = this.marker.getSelectNodeRectAndText(
+    let textArr;
+    ({ rects, textArr } = this.marker.getSelectNodeRectAndText(
       selection.start.node,
       selection.end.node,
       selection.start.offset,
       selection.end.offset
     ));
-    if (rects.length === 0) { return null; }
+    if (rects.length === 0) { return; }
+    text = textArr.join('\n');
 
     let highlightId = getRandomString();
     let noteGroupMeta = {
@@ -362,7 +381,7 @@ export default class Highlight extends BaseElement {
           ))
         )
       ) {
-        // 开头交集
+        // 开头交集（待划线开头与当前划线相交）
         data.merge = true;
         data.todo.push(id);
         check(line);
@@ -381,7 +400,7 @@ export default class Highlight extends BaseElement {
           ))
         )
       ) {
-        // 结尾交集
+        // 结尾交集（待划线结尾与当前划线相交）
         data.merge = true;
         data.todo.push(id);
         check(line);
@@ -397,7 +416,7 @@ export default class Highlight extends BaseElement {
           || (end.top < endRect.top && end.top >= start.top)
         )
       ) {
-        // 子集（是当前笔记的子集）
+        // 子集（待划线包含当前划线）
         data.merge = true;
         data.todo.push(id);
         check(line);
@@ -410,7 +429,7 @@ export default class Highlight extends BaseElement {
           || (end.top > endRect.top && start.top <= startRect.top)
         )
       ) {
-        // 子集（当前笔记为子集）
+        // 子集（当前划线包含待划线）
         data.merge = true;
         data.todo.push(id);
         check(line);
@@ -424,12 +443,13 @@ export default class Highlight extends BaseElement {
     });
 
     if (data.merge) {
-      ({ rects, text } = this.marker.getSelectNodeRectAndText(
+      ({ rects, textArr } = this.marker.getSelectNodeRectAndText(
         data.start.node,
         data.end.node,
         data.start.offset,
         data.end.offset
       ));
+      text = textArr.join('\n');
 
       data.todo.forEach(id => {
         notes.push(...this.lineMap.get(id).meta.notes);
@@ -608,6 +628,14 @@ export default class Highlight extends BaseElement {
           MenuType.SELECT
         );
       }
+
+      this.marker.noteList.openNoteList(
+        noteData.meta.notes.map(i => ({
+          id: i.id,
+          note: i.meta.note,
+          abstract: i.abstract,
+        }))
+      );
     }
 
     // 处理划线
@@ -692,44 +720,6 @@ export default class Highlight extends BaseElement {
   clear = () => {
     this.lineMap.clear();
     this.removeAllRectangle();
-  }
-
-
-  removeNote = (id) => {
-    let result = null;
-    this.lineMap.forEach((line, rootId) => {
-      if (line.meta.type !== HighlightType.HIGHLIGHT) {
-        return;
-      }
-      let notes = line.meta.notes;
-      let noteIndex = null;
-      const targetNote = notes.filter((item, index) => {
-        if (id === item.id) {
-          noteIndex = index;
-          return true;
-        }
-        return false;
-      })[0];
-
-      if (targetNote) {
-        notes.splice(noteIndex, 1);
-        result = {
-          rootId,
-          newNotes: notes,
-        }
-      }
-    });
-
-    if (result) {
-      this.lineMap.delete(result.rootId);
-      result.newNotes.reverse().forEach(i => {
-        this.highlightNote(i.selection, i.id, i.meta);
-      });
-      this.render();
-      this.marker.reset();
-      return true;
-    }
-    return false;
   }
 }
 

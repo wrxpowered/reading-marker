@@ -192,10 +192,15 @@ export default class Menu extends BaseElement {
   hide = () => {
     this.style.opacity = '0';
     this.style.display = 'none';
+    this.style.top = '';
+    this.style.left = '';
+    this.style.right = '';
+    this.style.bottom = '';
     this.reset();
   }
 
   reset = () => {
+    this.type = MenuType.SELECT;
     this.selectedMarking = null;
     this.parentUnderline = null;
   }
@@ -212,10 +217,12 @@ export default class Menu extends BaseElement {
     const tapTarget = this.getTapTarget(e.target)
     if (!this.itemMap.has(tapTarget)) { return false; }
 
+    const select = this.marker.getSelectText();
+    const abstractWithSeparation = select.textArr.join('\n');
     const source = {
       start: this.marker.textNode.start,
       end: this.marker.textNode.end,
-      abstract: this.marker.getSelectText()
+      abstract: select.text, 
     }
 
     const item = this.itemMap.get(tapTarget)
@@ -247,22 +254,24 @@ export default class Menu extends BaseElement {
       }
       else if (item.id === 'NOTE') {
         // 笔记
-        const data = createMarkingData(
-          source,
-          this.selectedMarking
-        );
+        const data = createMarkingData(source, this.selectedMarking);
+        this.marker.noteInput.selectedRange = data;
         this.marker.menuClickHandler(item.id, data);
         return null;
       }
-      else if(item.id === 'COPY') {
+      else if(item.id === 'COPY' || item.id === 'SHARE') {
         // 复制
-        this.marker.menuClickHandler(
-          item.id, 
-          createMarkingData(
-            source,
-            this.selectedMarking
+        let data = createMarkingData(source, this.selectedMarking);
+        if (!(
+          this.selectedMarking
+          && (
+            this.selectedMarking.originalStart 
+            || this.selectedMarking.originalEnd
           )
-        );
+        )) {
+          data.abstract = abstractWithSeparation;
+        }
+        this.marker.menuClickHandler(item.id, data);
       } else {
         // this.marker.menuClickHandler(item.id, createMarkingData(source));
       }

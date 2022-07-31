@@ -76,18 +76,15 @@ export function checkParaElement(element) {
   return false;
 }
 
-function isParaElement(ele) {
-  return (
-    (ele.className.indexOf('paragraph') > -1
-      || ele.className.indexOf('headline') > -1)
-    && ele.getAttribute('data-id')
-  );
-}
 
 export function getNextParaElement(ele) {
   const next = ele.nextElementSibling;
   if (next) {
-    if (isParaElement(next)) {
+    if (
+      (next.className.indexOf('paragraph') > -1
+      || next.className.indexOf('headline') > -1)
+      && next.getAttribute('data-id')
+    ) {
       return next;
     } else {
       return getNextParaElement(next);
@@ -99,7 +96,11 @@ export function getNextParaElement(ele) {
 export function getPrevParaElement(ele) {
   const prev = ele.previousElementSibling;
   if (prev) {
-    if (isParaElement(prev)) {
+    if (
+      (prev.className.indexOf('paragraph') > -1
+        || prev.className.indexOf('headline') > -1)
+      && prev.getAttribute('data-id')
+    ) {
       return prev;
     } else {
       return getPrevParaElement(prev);
@@ -371,6 +372,27 @@ export function getTouchPosition(e, offset = { x: 0, y: 0 }) {
 
 
 /**
+ *
+ *
+ * @export
+ * @param {any} pixelUnit
+ * @returns
+ */
+ export function anyToPx(pixelUnit) {
+  if (typeof pixelUnit === 'number') return pixelUnit
+  if (typeof pixelUnit === 'string') {
+    if (pixelUnit.indexOf('px') > -1) return Number(pixelUnit.replace('px', ''))
+    if (pixelUnit.indexOf('rem') > -1) {
+      const baseFontSize = Number((document.documentElement.style.fontSize || '24px').replace('px', ''))
+      return Number(pixelUnit.replace('rem', '')) * baseFontSize
+    }
+    return Number(pixelUnit)
+  }
+  return 0
+}
+
+
+/**
  * rect => Point[]
  *
  * @static
@@ -433,19 +455,23 @@ export function createMarkingData(current, selectedMarking, type, id) {
     if (origStart) {
       data.startParaId = origStart.id;
       data.startOffset = origStart.offset;
-      data.abstract = origStart.abstract;
     } else {
       data.startParaId = current.start.id;
       data.startOffset = current.start.offset;
-      data.abstract = current.abstract;
     }
     if (origEnd) {
       data.endParaId = origEnd.id;
       data.endOffset = origEnd.offset;
-      data.abstract = origEnd.abstract;
     } else {
       data.endParaId = current.end.id;
       data.endOffset = current.end.offset;
+    }
+
+    if (origStart) {
+      data.abstract = origStart.abstract;
+    } else if (origEnd) {
+      data.abstract = origEnd.abstract;
+    } else {
       data.abstract = current.abstract;
     }
   } else {

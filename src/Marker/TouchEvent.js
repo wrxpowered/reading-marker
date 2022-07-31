@@ -96,6 +96,7 @@ export default class TouchEvent {
     if (this.disabled) return
     if (e.touches && e.touches.length > 1) return
     if (!this.hook('touchstart', e)) return
+    if (e.button && e.button > 0) return
     this.touchStartCallbacks.forEach(callback => callback(e))
 
     this.longTapTimerHandler = setTimeout(() => {

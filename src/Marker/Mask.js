@@ -8,7 +8,7 @@ export default class Mask extends BaseElement {
     this.container = container;
     this.option = {
       color: '#0097FF',
-      opacity: 0.25,
+      opacity: 1,
     };
     this.rects = [];
     this.animating = false;
@@ -30,7 +30,7 @@ export default class Mask extends BaseElement {
     try {
       ({ rects } = this.marker.getSelectNodeRectAndText(start.node, end.node, start.offset, end.offset))
     } catch (error) {
-      error(error);
+      console.error(error);
       rects = [];
     }
     this.renderRectsLine(rects)

@@ -1,0 +1,167 @@
+
+.marker-modal-open {
+  // Kill the scroll on the body
+  overflow: hidden;
+  .marker-modal {
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+}
+
+.marker-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: $zindex-note-input + 1;
+  display: none;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  outline: 0;
+}
+
+.marker-modal-dialog {
+  position: fixed;
+  top: auto;
+  left: auto;
+  right: auto;
+  bottom: 0;
+  width: 100%;
+  pointer-events: none;
+  .marker-modal.fade & {
+    transition: -webkit-transform .3s ease-out;
+    transition: transform .3s ease-out;
+    transition: transform .3s ease-out,-webkit-transform .3s ease-out;
+  }
+  .marker-modal.show & {
+    -webkit-transform: none;
+    transform: none
+  }
+}
+
+.marker-modal-dialog-scrollable {
+  display: -ms-flexbox;
+  display: flex;
+  max-height: calc(100% - 1rem);
+  .marker-modal-content {
+    max-height: calc(100vh - 1rem);
+    overflow: hidden
+  }
+}
+
+.marker-modal-dialog-centered {
+  display: -ms-flexbox;
+  display: flex;
+  -ms-flex-align: center;
+  align-items: center;
+  min-height: calc(100% - 1rem);
+
+  // Ensure `marker-modal-dialog-centered` extends the full height of the view (IE10/11)
+  &::before {
+    display: block; // IE10
+    height: calc(100vh - 1rem);
+    height: -webkit-min-content;
+    height: -moz-min-content;
+    height: min-content;
+    content: "";
+  }
+
+  &.marker-modal-dialog-scrollable {
+    -ms-flex-direction: column;
+    flex-direction: column;
+    -ms-flex-pack: center;
+    justify-content: center;
+    height: 100%;
+    .marker-modal-content {
+      max-height: none;
+    }
+    &::before {
+      content: none;
+    }
+  }
+}
+
+
+.marker-modal-content {
+  position: relative;
+  display: -ms-flexbox;
+  display: flex;
+  -ms-flex-direction: column;
+  flex-direction: column;
+  width: 100%;
+  pointer-events: auto;
+  background-color: #595959;
+  background-clip: padding-box;
+  outline: 0;
+}
+
+
+.marker-modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: $zindex-note-input;
+  width: 100vw;
+  height: 100vh;
+  background-color: transparent;
+  &.fade {
+    opacity: 0;
+  }
+  &.show {
+    opacity: .5;
+  }
+}
+
+
+.marker-modal-scrollbar-measure {
+  position: absolute;
+  top: -9999px;
+  width: 50px;
+  height: 50px;
+  overflow: scroll;
+}
+
+
+
+
+
+@keyframes modalfadeIn {
+    from { opacity: 0; }
+      to { opacity: 1; }
+}
+
+@keyframes modalfadeOut {
+    from { opacity: 1; }
+      to { opacity: 0; }
+}
+
+@keyframes modalslideIn {
+  from { transform: translateY(15%); }
+    to { transform: translateY(0); }
+}
+
+@keyframes modalslideOut {
+    from { transform: translateY(0); }
+    to { transform: translateY(-10%); }
+}
+
+.marker-modal[aria-hidden="false"] .marker-modal-backdrop {
+  animation: modalfadeIn .3s cubic-bezier(0.0, 0.0, 0.2, 1);
+}
+
+.marker-modal[aria-hidden="false"] .marker-modal-content {
+  animation: modalslideIn .3s cubic-bezier(0, 0, .2, 1);
+}
+
+.marker-modal[aria-hidden="true"] .marker-modal-backdrop {
+  animation: modalfadeOut .3s cubic-bezier(0.0, 0.0, 0.2, 1);
+}
+
+.marker-modal[aria-hidden="true"] .marker-modal-content {
+  animation: modalslideOut .3s cubic-bezier(0, 0, .2, 1);
+}
+
+.marker-modal .marker-modal-content,
+.marker-modal .marker-modal-backdrop {
+  will-change: transform;
+}
