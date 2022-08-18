@@ -4,7 +4,6 @@ import Menu from './Menu';
 import Highlight from './Highlight';
 import NoteList from './NoteList';
 import NoteInput from './NoteInput';
-import Toast from './Toast';
 import TouchEvent, { EventType } from './TouchEvent';
 import { 
   DeviceType, 
@@ -58,7 +57,6 @@ const defaultOptions = {
   ],
   noteListContainer: document.body,
   noteInputContainer: document.body,
-  toastContainer: document.body,
   scrollOffsetTop: 100,
   scrollOffsetBottom: 100,
   scrollSpeedLevel: 4,
@@ -102,7 +100,6 @@ export default class MarkerCore {
     this.noteList = null;
     this.noteListOpenHandler = () => { }
     this.noteRemoveHandler = () => { }
-    this.toast = null;
     this.scrollInterval = null;
     this.scrollOffsetTop = null;
     this.scrollOffsetBottom = null;
@@ -417,7 +414,6 @@ export default class MarkerCore {
     this.highlight = new Highlight(this.container, this);
     this.noteList = new NoteList(this.options.noteListContainer, this);
     this.noteInput = new NoteInput(this.options.noteInputContainer, this);
-    this.toast = new Toast(this.options.toastContainer);
     this.scrollOffsetTop = anyToPx(this.options.scrollOffsetTop);
     this.scrollOffsetBottom = anyToPx(this.options.scrollOffsetBottom);
     this.scrollSpeedLevel = this.options.scrollSpeedLevel;
@@ -1385,7 +1381,6 @@ export default class MarkerCore {
     this.menu.destroy();
     this.noteInput.destroy();
     this.noteList.destroy();
-    this.toast.remove();
 
     this.container = null;
     this.paraAndLinesMap = {};
@@ -1415,7 +1410,6 @@ export default class MarkerCore {
     this.noteList = null;
     this.noteListOpenHandler = () => { }
     this.noteRemoveHandler = () => { }
-    this.toast = null;
     this.windowHeight = null;
     this.scrollContainer = null
     this.scrollInterval = null;

@@ -1,7 +1,7 @@
 import { addClass, removeClass } from './utilities';
 
 export default class Toast {
-  constructor(container) {
+  constructor(container = document.body) {
     this.container = container;
     this.element = null;
     this.timer = null;
