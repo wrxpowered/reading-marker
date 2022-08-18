@@ -585,20 +585,6 @@ export function checkMarkingData(container, data) {
 
 
 
-export function copyText(text) {
-  const textarea = document.createElement('textarea');
-  textarea.value = text;
-  textarea.style.position = 'absolute';
-  textarea.style.left = '-99999'
-  document.body.appendChild(textarea);
-  textarea.select();
-  if (document.execCommand('copy')) {
-    document.execCommand('copy');
-  }
-  document.body.removeChild(textarea);
-}
-
-
 export function getRandomString(length = 15) {
   var result = '';
   var characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';

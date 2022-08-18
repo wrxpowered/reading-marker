@@ -1,6 +1,5 @@
 import MarkerCore from './MarkerCore';
 import {
-  copyText,
   isElement,
   isArray,
   hasClass,
@@ -22,8 +21,16 @@ export default class MarkerHandler extends MarkerCore {
 
   // 文本复制
   copyText = (text) => {
-    copyText(text);
-    this.toast.show('已复制到剪贴板');
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'absolute';
+    textarea.style.left = '-99999'
+    document.body.appendChild(textarea);
+    textarea.select();
+    if (document.execCommand('copy')) {
+      document.execCommand('copy');
+    }
+    document.body.removeChild(textarea);
   }
 
   onScroll = (callback) => {
