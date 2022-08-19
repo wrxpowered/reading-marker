@@ -2,15 +2,17 @@ import MarkerCore from './MarkerCore';
 import {
   isElement,
   isArray,
-  hasClass,
+  containSomeClass,
   log,
   checkMarkingData,
+  getTouchPosition,
 } from './utilities';
 import {
   SelectStatus, 
   HighlightType, 
   MarkingType 
 } from './types';
+import { TEXTUAL_ITEM_TYPE_ARRAY } from './configs';
 
 
 
@@ -66,13 +68,10 @@ export default class MarkerHandler extends MarkerCore {
   }
 
   // 选中单词
-  selectWord = (element) => {
+  selectWord = (e) => {
+    const element = e.target;
     if (!isElement(element)) {
       log('invalid parameter.');
-      return false;
-    }
-    if (!hasClass(element, 'word')) {
-      log('element is not a word.');
       return false;
     }
     if (!this.isContains(element)) {
@@ -80,10 +79,21 @@ export default class MarkerHandler extends MarkerCore {
       return false;
     }
 
-    const paraElement = element.parentElement;
+    let paraElement = element;
+    if (!containSomeClass(element, TEXTUAL_ITEM_TYPE_ARRAY)) {
+      paraElement = element.parentElement;
+    }
     const para = this.handlePara(paraElement);
     if (!para) { return false; }
-    const offset = +element.getAttribute('data-offset');
+
+    const { x, y } = getTouchPosition(e);
+    const wordPos = this.getClickPosition(
+      paraElement,
+      x - this.screenRelativeOffset.x,
+      y - this.screenRelativeOffset.y
+    );
+
+    const offset = wordPos.word.offset;
     const { rects } = this.getSelectNodeRectAndText(
       paraElement,
       paraElement,
@@ -126,6 +136,67 @@ export default class MarkerHandler extends MarkerCore {
     this.menu.show();
     return true;
   }
+
+  // selectWord = (element) => {
+  //   if (!isElement(element)) {
+  //     log('invalid parameter.');
+  //     return false;
+  //   }
+  //   if (!hasClass(element, 'word')) {
+  //     log('element is not a word.');
+  //     return false;
+  //   }
+  //   if (!this.isContains(element)) {
+  //     log('element is out of boundary.');
+  //     return false;
+  //   }
+
+  //   const paraElement = element.parentElement;
+  //   const para = this.handlePara(paraElement);
+  //   if (!para) { return false; }
+  //   const offset = +element.getAttribute('data-offset');
+  //   const { rects } = this.getSelectNodeRectAndText(
+  //     paraElement,
+  //     paraElement,
+  //     offset,
+  //     offset
+  //   );
+  //   if (rects.length === 0) { return false; }
+
+  //   const startRect = rects[0];
+  //   const endRect = rects[rects.length - 1];
+
+  //   this.textNode.start = {
+  //     id: para.id,
+  //     node: paraElement,
+  //     offset: offset
+  //   }
+  //   this.cursor.start.height = startRect.height;
+  //   this.cursor.start.position = {
+  //     x: startRect.left,
+  //     y: startRect.top,
+  //   }
+
+  //   this.textNode.end = {
+  //     id: para.id,
+  //     node: paraElement,
+  //     offset: offset
+  //   }
+  //   this.cursor.end.height = endRect.height;
+  //   this.cursor.end.position = {
+  //     x: endRect.left + endRect.width,
+  //     y: endRect.top
+  //   }
+
+  //   this.noteList.hide();
+  //   this.cursor.start.show();
+  //   this.cursor.end.show();
+  //   this.mask.renderRectsLine(rects);
+  //   this.menu.reset();
+  //   this.selectStatus = SelectStatus.FINISH;
+  //   this.menu.show();
+  //   return true;
+  // }
 
   // 禁用
   disable = () => {

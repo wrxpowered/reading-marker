@@ -28,7 +28,9 @@ import {
   isIE9,
   getTouch,
   anyToPx,
+  containSomeClass,
 } from './utilities';
+import { TEXTUAL_ITEM_TYPE_ARRAY } from './configs';
 import './polyfill';
 
 
@@ -670,7 +672,7 @@ export default class MarkerCore {
 
   getClickPosition = (element, x, y, isStartCursor) => {
     let paraElement = element;
-    if (element.className.indexOf('word') > -1) {
+    if (!containSomeClass(element, TEXTUAL_ITEM_TYPE_ARRAY)) {
       paraElement = element.parentElement;
     }
     const para = this.handlePara(paraElement);

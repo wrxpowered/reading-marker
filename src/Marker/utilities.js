@@ -1,4 +1,5 @@
-import { DeviceType, MarkingType } from './types'
+import { WORD_SPLIT_REG_EXP } from './configs';
+import { DeviceType } from './types';
 
 
 export function log(message) {
@@ -30,6 +31,21 @@ export function hasClass(element, selector) {
     return true;
   }
   return false;
+}
+
+export function containClass(element, className) {
+  if (element.className.indexOf(className) > -1) {
+    return true;
+  }
+  return false;
+}
+
+export function containSomeClass(element, selectors = []) {
+  return selectors.some(selector => containClass(element, selector));
+}
+
+export function containEveryClass(element, selectors = []) {
+  return selectors.every(selector => containClass(element, selector));
 }
 
 export function addClass(el, className) {
@@ -195,15 +211,15 @@ export function getWordSibling(line, wordIndex) {
 
 
 
-export function getParaRects(paraEle, paraId, offset) {
+export function getParaRectsOld(paraEle, paraId, offset) {
   const paraOffsetTop = paraEle.offsetTop;
   const paraOffsetLeft = paraEle.offsetLeft;
   const paraOffsetWidth = paraEle.offsetWidth;
   const paraOffsetHeight = paraEle.offsetHeight;
   const paraRect = paraEle.getBoundingClientRect();
+  const lineHeight = Number(window.getComputedStyle(paraEle).lineHeight.replace('px', ''));
   const words = paraEle.getElementsByClassName('word');
   const wordsLength = words.length;
-  const lineHeight = Number(window.getComputedStyle(paraEle).lineHeight.replace('px', ''))
 
   var item = {
     id: paraId,
@@ -218,7 +234,6 @@ export function getParaRects(paraEle, paraId, offset) {
       right: paraRect.right,
     },
     lineHeight: lineHeight,
-    wordsLength: wordsLength,
     offsetsMap: {}, // 单词 offset 与 index 对应关系
     lines: [],
     index: {
@@ -314,6 +329,138 @@ export function getParaRects(paraEle, paraId, offset) {
         text: word.textContent,
       });
       item.offsetsMap[dataOffset] = i;
+    }
+  }
+
+  return item;
+}
+
+
+export function getParaRects(paraEle, paraId, offset) {
+  const paraOffsetTop = paraEle.offsetTop;
+  const paraOffsetLeft = paraEle.offsetLeft;
+  const paraOffsetWidth = paraEle.offsetWidth;
+  const paraOffsetHeight = paraEle.offsetHeight;
+  const paraRect = paraEle.getBoundingClientRect();
+  const lineHeight = Number(window.getComputedStyle(paraEle).lineHeight.replace('px', ''));
+
+  var item = {
+    id: paraId,
+    width: paraOffsetWidth,
+    height: paraOffsetHeight,
+    offsetTop: paraOffsetTop,
+    offsetLeft: paraOffsetLeft,
+    rect: {
+      width: paraRect.width,
+      height: paraRect.height,
+      left: paraRect.left,
+      right: paraRect.right,
+    },
+    lineHeight: lineHeight,
+    offsetsMap: {}, // 单词 offset 与 index 对应关系
+    lines: [],
+    index: {
+      top: [],
+      bottom: [],
+      offset: [],
+      lineBreak: {}
+    },
+  };
+
+  var rect, counter = -1, paraOffset = 0;
+
+  function updateLineInfo(targetRect, lineStartOffset, isLineBreak) {
+    rect = targetRect;
+    ++counter;
+    item.lines[counter] = [];
+    item.index.top[counter] = rect.top;
+    item.index.bottom[counter] = rect.bottom;
+    item.index.offset[counter] = lineStartOffset;
+    if (isLineBreak) {
+      item.index.lineBreak[counter] = true;
+    }
+  }
+
+  const childNodes = paraEle.childNodes;
+  for (let i = 0, len = childNodes.length; i < len; i++) {
+    const node =  paraEle.childNodes[i];
+    if (node.nodeName === '#text') {
+      const words = node.textContent.match(WORD_SPLIT_REG_EXP);
+      const range = document.createRange();
+      let textIndex = 0;
+      for (let j = 0; j < words.length; j++) {
+        const wordLength = words[j].length;
+        range.setStart(node, textIndex);
+        range.setEnd(node, textIndex + wordLength);
+        const textRects = range.getClientRects();
+        const offsetTop = textRects[0].top - offset.y;
+        const offsetLeft = textRects[0].left - offset.x;
+        const offsetBottom = textRects[0].bottom - offset.y;
+        const offsetRight = textRects[0].right - offset.x;
+        // 部分换行处的空白符，有 0.0x 的宽度，原因未知，手动以 0.1 为基准进行忽略
+        const offsetWidth = textRects[0].width < 0.1 ? 0 : textRects[0].width;
+        const offsetHeight = textRects[0].height;
+
+        if (textRects.length > 1 && offsetWidth > 0) {
+          // 单词断行，其中空白符导致的断行(width 为 0 时)应该被忽略
+          for (let index = 0; index < textRects.length; index++) {
+            const lineRect = textRects[index];
+            const partItem = {
+              indexOfLine: item.lines[counter].length,
+              lineIndex: counter,
+              top: lineRect.top - offset.y,
+              left: lineRect.left - offset.x,
+              bottom: lineRect.bottom - offset.y,
+              right: lineRect.right - offset.x,
+              width: lineRect.width,
+              height: lineRect.height,
+              offset: paraOffset,
+              length: wordLength,
+              text: words[j],
+              lineBreak: true
+            };
+            if (!rect || rect.bottom < partItem.top) {
+              updateLineInfo({
+                top: partItem.top,
+                bottom: partItem.top + partItem.height
+              }, paraOffset, j > 0);
+            }
+            item.lines[counter].push(partItem);
+            item.offsetsMap[paraOffset] = i;
+          }
+          continue;
+        }
+        if (!rect || rect.bottom < offsetTop) {
+          // 新的一行
+          updateLineInfo({
+            top: offsetTop,
+            bottom: offsetBottom
+          }, paraOffset);
+        }
+        if (rect.top > offsetTop) {
+          rect.top = offsetTop;
+        } else if (rect.bottom < offsetBottom) {
+          rect.bottom = offsetBottom;
+        }
+        var currentLine = item.lines[counter];
+        currentLine.push({
+          indexOfLine: item.lines[counter].length,
+          lineIndex: counter,
+          top: offsetTop,
+          left: offsetLeft,
+          bottom: offsetBottom,
+          right: offsetRight,
+          width: offsetWidth,
+          height: offsetHeight,
+          offset: paraOffset,
+          length: wordLength,
+          text: words[j],
+        });
+        item.offsetsMap[paraOffset] = j;
+
+        textIndex += wordLength;
+        paraOffset += wordLength;
+      }
     }
   }
 
@@ -431,10 +578,6 @@ function checkSideOfMarkingData(container, paraId, offset, prefix) {
   );
   if (!paraElement) {
     // log(`${prefix} paragraph element not found.`);
-    return null;
-  }
-  if (!paraElement.querySelector(`[data-offset="${offset}"]`)) {
-    // log(`${prefix} offset not found.`);
     return null;
   }
   return paraElement;
