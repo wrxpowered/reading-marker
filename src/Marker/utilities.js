@@ -268,6 +268,9 @@ export function getParaRects(paraEle, paraId, offset) {
         range.setStart(node, textIndex);
         range.setEnd(node, textIndex + wordLength);
         const textRects = range.getClientRects();
+        // 段尾的注释符会导致分割出多余的空白 text 节点，手动忽略无 rect 的节点
+        if (textRects.length === 0) { continue; }
+
         const offsetTop = textRects[0].top - offset.y;
         const offsetLeft = textRects[0].left - offset.x;
         const offsetBottom = textRects[0].bottom - offset.y;
