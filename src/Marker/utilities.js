@@ -563,7 +563,7 @@ export function checkMarkingData(container, data) {
         },
         id: firstParaId,
         node: firstParaElement,
-        offset: +firstParaElement.firstElementChild.getAttribute('data-offset')
+        offset: 0
       }
     }
 
@@ -585,6 +585,9 @@ export function checkMarkingData(container, data) {
         log('invalid end para in marking data.');
         return null;
       }
+      const textContent = lastParaElement.textContent;
+      const words = textContent.match(WORD_SPLIT_REG_EXP);
+      const lastOffset = (textContent.length - 1) - words[words.length - 1];
       range.end = {
         untouchable: true,
         source: {
@@ -594,7 +597,7 @@ export function checkMarkingData(container, data) {
         },
         id: lastParaId,
         node: lastParaElement,
-        offset: +lastParaElement.lastElementChild.getAttribute('data-offset')
+        offset: lastOffset
       }
     }
 
