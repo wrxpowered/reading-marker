@@ -310,10 +310,7 @@ export function getParaRects(paraEle, paraId, offset) {
         }
         if (!rect || rect.bottom < offsetTop) {
           // 新的一行
-          updateLineInfo({
-            top: offsetTop,
-            bottom: offsetBottom
-          }, paraOffset);
+          updateLineInfo({ top: offsetTop, bottom: offsetBottom }, paraOffset);
         }
         if (rect.top > offsetTop) {
           rect.top = offsetTop;
@@ -340,6 +337,41 @@ export function getParaRects(paraEle, paraId, offset) {
         textIndex += wordLength;
         paraOffset += wordLength;
       }
+    } 
+    else if (node.nodeName.toLowerCase() === 'span') {
+      // 注释、图标、上标等非文本节点
+      const graphRects = node.getClientRects();
+      const offsetTop = graphRects[0].top - offset.y;
+      const offsetLeft = graphRects[0].left - offset.x;
+      const offsetBottom = graphRects[0].bottom - offset.y;
+      const offsetRight = graphRects[0].right - offset.x;
+      const offsetWidth = graphRects[0].width;
+      const offsetHeight = graphRects[0].height;
+      if (!rect || rect.bottom < offsetTop) {
+        updateLineInfo({ top: offsetTop, bottom: offsetBottom }, paraOffset);
+      }
+      if (rect.top > offsetTop) {
+        rect.top = offsetTop;
+      } else if (rect.bottom < offsetBottom) {
+        rect.bottom = offsetBottom;
+      }
+      var currentLine = item.lines[counter];
+      currentLine.push({
+        indexOfLine: item.lines[counter].length,
+        lineIndex: counter,
+        top: offsetTop,
+        left: offsetLeft,
+        bottom: offsetBottom,
+        right: offsetRight,
+        width: offsetWidth,
+        height: offsetHeight,
+        offset: paraOffset,
+        length: 1,
+        text: '',
+      });
+      item.offsetsMap[paraOffset] = indexOffset;
+      indexOffset++;
+      paraOffset += 1;
     }
   }
 
