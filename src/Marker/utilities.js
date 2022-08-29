@@ -242,7 +242,7 @@ export function getParaRects(paraEle, paraId, offset) {
     },
   };
 
-  var rect, counter = -1, paraOffset = 0;
+  var rect, counter = -1, paraOffset = 0, indexOffset = 0;
 
   function updateLineInfo(targetRect, lineStartOffset, isLineBreak) {
     rect = targetRect;
@@ -334,7 +334,8 @@ export function getParaRects(paraEle, paraId, offset) {
           length: wordLength,
           text: words[j],
         });
-        item.offsetsMap[paraOffset] = j;
+        item.offsetsMap[paraOffset] = indexOffset;
+        indexOffset++;
 
         textIndex += wordLength;
         paraOffset += wordLength;
