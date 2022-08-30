@@ -25,13 +25,26 @@ export default class MarkerHandler extends MarkerCore {
   copyText = (text) => {
     const textarea = document.createElement('textarea');
     textarea.value = text;
+    textarea.setAttribute('readonly', true);
     textarea.style.position = 'absolute';
     textarea.style.left = '-99999'
     document.body.appendChild(textarea);
-    textarea.select();
+
+    if (textarea.createTextRange) {
+      const range = textarea.createTextRange();
+      range.collapse(true);
+      range.moveStart('character', 0);
+      range.moveEnd('character', textarea.value.length);
+      range.select();
+    } else {
+      textarea.setSelectionRange(0, textarea.value.length);
+      textarea.focus();
+    }
+
     if (document.execCommand('copy')) {
       document.execCommand('copy');
     }
+    textarea.blur();
     document.body.removeChild(textarea);
   }
 
