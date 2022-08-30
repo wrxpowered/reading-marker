@@ -271,18 +271,29 @@ export function getParaRects(paraEle, paraId, offset) {
         // 段尾的注释符会导致分割出多余的空白 text 节点，手动忽略无 rect 的节点
         if (textRects.length === 0) { continue; }
 
-        const offsetTop = textRects[0].top - offset.y;
-        const offsetLeft = textRects[0].left - offset.x;
-        const offsetBottom = textRects[0].bottom - offset.y;
-        const offsetRight = textRects[0].right - offset.x;
-        // 部分换行处的空白符，有 0.0x 的宽度，原因未知，手动以 0.1 为基准进行忽略
-        const offsetWidth = textRects[0].width < 0.1 ? 0 : textRects[0].width;
-        const offsetHeight = textRects[0].height;
+        // iOS 12 中，换行处下一行开头的单词会产生两个 rects，
+        // 其中第一个为宽度 0 的空白 rect，手动添加一次过滤进行忽略
+        let rects = [];
+        for (let i = 0, len = textRects.length; i < len; i++) {
+          const rect = textRects[i];
+          if (rect.width > 0) {
+            rects.push(JSON.parse(JSON.stringify(rect)));
+          }
+        }
+        if (rects.length === 0) { continue; }
 
-        if (textRects.length > 1 && offsetWidth > 0) {
+        const offsetTop = rects[0].top - offset.y;
+        const offsetLeft = rects[0].left - offset.x;
+        const offsetBottom = rects[0].bottom - offset.y;
+        const offsetRight = rects[0].right - offset.x;
+        // 部分换行处的空白符，有 0.0x 的宽度，原因未知，手动以 0.1 为基准进行忽略
+        const offsetWidth = rects[0].width < 0.1 ? 0 : rects[0].width;
+        const offsetHeight = rects[0].height;
+
+        if (rects.length > 1 && offsetWidth > 0) {
           // 单词断行，其中空白符导致的断行(width 为 0 时)应该被忽略
-          for (let index = 0; index < textRects.length; index++) {
-            const lineRect = textRects[index];
+          for (let index = 0; index < rects.length; index++) {
+            const lineRect = rects[index];
             const partItem = {
               indexOfLine: item.lines[counter].length,
               lineIndex: counter,
